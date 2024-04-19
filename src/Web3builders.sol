@@ -14,6 +14,8 @@ contract Web3Builders is ERC721, ERC721Enumerable, ERC721Pausable, Ownable {
     bool public publicMintOpen = false;
     bool public allowListMintOpen = false;
 
+    mapping(address => bool)public allowList;
+
     constructor(address initialOwner)
         ERC721("Web3Builders", "WE3")
         Ownable(initialOwner)
@@ -34,24 +36,42 @@ contract Web3Builders is ERC721, ERC721Enumerable, ERC721Pausable, Ownable {
     function editMintWindows(bool _publicMintOpen, bool _allowListMintOpen) external onlyOwner {
     publicMintOpen = _publicMintOpen;
     allowListMintOpen = _allowListMintOpen;
+
 }
+
+  function internalMint() internal {
+         require(totalSupply() < maxSupply, "We Sold Out");
+        uint256 tokenId = _nextTokenId++;
+        _safeMint(msg.sender, tokenId);
+    }
 
 
     // Add public Mnt and AllowListMintOpen Variables
     function allowListMint() public payable {
         require(allowListMintOpen, "AllowList Mint Closed");
+        require(allowList[msg.sender], "You are not on the Allow List");
         require(msg.value == 0.001 ether, 'not enough ETH');
-        require(totalSupply() < maxSupply, "We Sold Out");
-        uint256 tokenId = _nextTokenId++;
-        _safeMint(msg.sender, tokenId);
+        internalMint();
     }
 
     function publicMint() public payable {
         require(publicMintOpen, "public mint is closed");
         require(msg.value == 0.01 ether, 'not enough ETH');
-        require(totalSupply() < maxSupply, "We Sold Out");
-        uint256 tokenId = _nextTokenId++;
-        _safeMint(msg.sender, tokenId);
+        internalMint();
+    }
+
+    //get the balance of the contract
+    function withdraw(address _addr) external onlyOwner {
+        uint256 balance = address(this).balance;
+        payable(_addr).transfer(balance);
+
+    }
+
+    // populate the Allow List
+    function setAllowList(address[] calldata addresses) external onlyOwner {
+        for(uint256 i = 0; i <addresses.length; i++){
+            allowList[addresses[i]] = true;
+        }
     }
 
     // The following functions are overrides required by Solidity.
